@@ -4,7 +4,6 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: desafio-info-api
-    command: npm run start:dev
     ports:
       - "3000:3000"
     volumes:

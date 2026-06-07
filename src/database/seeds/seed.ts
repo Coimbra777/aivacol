@@ -12,7 +12,10 @@ async function runSeeds(): Promise<void> {
   try {
     const userRepository = dataSource.getRepository(User);
     const existingUser = await userRepository.findOne({
-      where: { nickname: "aivacol" },
+      where: [
+        { nickname: 'aivacol' },
+        { email: process.env.SEED_AIVACOL_EMAIL as string },
+      ],
     });
 
     if (existingUser) {
