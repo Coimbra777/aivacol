@@ -39,13 +39,19 @@ Bônus implementados:
 
 ## Como rodar do zero
 
-1. Copie o arquivo de ambiente:
+1. Clone o projeto:
+
+```bash
+git clone https://github.com/Coimbra777/desafio-info.git
+```
+
+2. Copie o arquivo de ambiente:
 
 ```bash
 cp .env.example .env
 ```
 
-2. Suba o ambiente completo:
+3. Suba o ambiente completo:
 
 ```bash
 make setup
