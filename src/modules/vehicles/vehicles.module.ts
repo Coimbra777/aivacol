@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { MessagingModule } from "../messaging/messaging.module";
+import { AuditModule } from "../audit/audit.module";
 import { Model } from "../models/entities/model.entity";
 import { Vehicle } from "./entities/vehicle.entity";
 import { VehiclesCacheService } from "./vehicles-cache.service";
@@ -11,7 +11,7 @@ import { VehiclesService } from "./vehicles.service";
 @Module({
   imports: [
     ConfigModule,
-    MessagingModule,
+    AuditModule,
     TypeOrmModule.forFeature([Vehicle, Model]),
   ],
   controllers: [VehiclesController],

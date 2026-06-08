@@ -6,21 +6,8 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Channel, ChannelModel, ConsumeMessage, connect } from "amqplib";
+import { AuditEvent } from "./audit-event.type";
 import { AuditService } from "./audit.service";
-
-type AuditEventMessage = {
-  type?: string;
-  event?: string;
-  entity?: string;
-  entityId?: number;
-  userId?: number;
-  payload?: unknown;
-  vehicleId?: number;
-  data?: {
-    createdBy?: number;
-    [key: string]: unknown;
-  };
-};
 
 @Injectable()
 export class AuditConsumer implements OnModuleInit, OnModuleDestroy {
@@ -75,21 +62,41 @@ export class AuditConsumer implements OnModuleInit, OnModuleDestroy {
 
   private async handleMessage(message: ConsumeMessage): Promise<void> {
     try {
-      const parsedMessage = JSON.parse(
-        message.content.toString("utf-8"),
-      ) as AuditEventMessage;
+      const parsedMessage = JSON.parse(message.content.toString("utf-8")) as {
+        event?: AuditEvent["event"];
+        entity?: AuditEvent["entity"];
+        entityId?: number;
+        userId?: number | null;
+        payload?: Record<string, unknown>;
+        createdAt?: string | Date;
+      };
+
+      if (
+        !parsedMessage.event ||
+        parsedMessage.entity !== "vehicle" ||
+        typeof parsedMessage.entityId !== "number"
+      ) {
+        this.logger.warn(
+          "Invalid audit event received. Message will be ignored.",
+        );
+        return;
+      }
 
       await this.auditService.saveLog({
-        event: parsedMessage.type ?? parsedMessage.event ?? "unknown",
-        entity:
-          parsedMessage.entity ??
-          (parsedMessage.type ?? parsedMessage.event ?? "unknown").split(
-            ".",
-          )[0],
-        entityId: parsedMessage.entityId ?? parsedMessage.vehicleId ?? null,
-        userId: parsedMessage.userId ?? parsedMessage.data?.createdBy ?? null,
-        payload: parsedMessage.payload ?? parsedMessage.data ?? parsedMessage,
-        createdAt: new Date(),
+        event: parsedMessage.event,
+        entity: "vehicle",
+        entityId: parsedMessage.entityId,
+        userId:
+          typeof parsedMessage.userId === "number"
+            ? parsedMessage.userId
+            : null,
+        payload:
+          parsedMessage.payload && typeof parsedMessage.payload === "object"
+            ? parsedMessage.payload
+            : {},
+        createdAt: parsedMessage.createdAt
+          ? new Date(parsedMessage.createdAt)
+          : new Date(),
       });
     } catch (error) {
       const messageText =

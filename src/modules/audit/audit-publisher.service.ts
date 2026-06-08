@@ -1,14 +1,20 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Channel, ChannelModel, connect } from "amqplib";
+import { AuditEvent, AuditEventName } from "./audit-event.type";
 
 @Injectable()
-export class RabbitmqService {
-  private readonly logger = new Logger(RabbitmqService.name);
+export class AuditPublisherService {
+  private readonly logger = new Logger(AuditPublisherService.name);
 
   constructor(private readonly configService: ConfigService) {}
 
-  async publishAuditEvent(event: unknown): Promise<void> {
+  async publishVehicleEvent(
+    event: AuditEventName,
+    entityId: number,
+    userId: number | null,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
     const rabbitmqUrl = this.configService.get<string>("RABBITMQ_URL");
     const queueName = this.configService.get<string>("RABBITMQ_AUDIT_QUEUE");
 
@@ -27,7 +33,17 @@ export class RabbitmqService {
       channel = await connection.createChannel();
 
       await channel.assertQueue(queueName, { durable: true });
-      channel.sendToQueue(queueName, Buffer.from(JSON.stringify(event)), {
+
+      const auditEvent: AuditEvent = {
+        event,
+        entity: "vehicle",
+        entityId,
+        userId,
+        payload,
+        createdAt: new Date(),
+      };
+
+      channel.sendToQueue(queueName, Buffer.from(JSON.stringify(auditEvent)), {
         persistent: true,
         contentType: "application/json",
       });

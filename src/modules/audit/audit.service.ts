@@ -8,19 +8,7 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Collection, Document, MongoClient, ObjectId, WithId } from "mongodb";
-
-type AuditLog = {
-  event: string;
-  entity: string;
-  entityId: number | null;
-  userId: number | null;
-  payload: unknown;
-  createdAt: Date;
-};
-
-type AuditLogResponse = AuditLog & {
-  id: string;
-};
+import { AuditEvent, AuditLogResponse } from "./audit-event.type";
 
 @Injectable()
 export class AuditService implements OnModuleInit, OnModuleDestroy {
@@ -34,7 +22,9 @@ export class AuditService implements OnModuleInit, OnModuleDestroy {
     const mongodbUri = this.configService.get<string>("MONGODB_URI");
 
     if (!mongodbUri) {
-      this.logger.warn("MongoDB is not configured. Audit logs will be skipped.");
+      this.logger.warn(
+        "MongoDB is not configured. Audit logs will be skipped.",
+      );
       return;
     }
 
@@ -55,9 +45,11 @@ export class AuditService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async saveLog(auditLog: AuditLog): Promise<void> {
+  async saveLog(auditLog: AuditEvent): Promise<void> {
     if (!this.collection) {
-      this.logger.warn("MongoDB collection is not available. Skipping audit log save.");
+      this.logger.warn(
+        "MongoDB collection is not available. Skipping audit log save.",
+      );
       return;
     }
 
@@ -87,10 +79,6 @@ export class AuditService implements OnModuleInit, OnModuleDestroy {
     return auditLogs.map((auditLog) => this.mapAuditLog(auditLog));
   }
 
-  async findLatest(): Promise<AuditLogResponse[]> {
-    return this.findAll();
-  }
-
   async findOne(id: string): Promise<AuditLogResponse> {
     if (!ObjectId.isValid(id)) {
       throw new BadRequestException("Invalid audit log id");
@@ -112,14 +100,25 @@ export class AuditService implements OnModuleInit, OnModuleDestroy {
   }
 
   private mapAuditLog(auditLog: WithId<Document>): AuditLogResponse {
+    const event =
+      auditLog.event === "vehicle.updated" ||
+      auditLog.event === "vehicle.deleted"
+        ? auditLog.event
+        : "vehicle.created";
+    const entityId = typeof auditLog.entityId === "number" ? auditLog.entityId : 0;
+    const userId = typeof auditLog.userId === "number" ? auditLog.userId : null;
+    const payload =
+      auditLog.payload && typeof auditLog.payload === "object"
+        ? (auditLog.payload as Record<string, unknown>)
+        : {};
+
     return {
       id: auditLog._id.toString(),
-      event: String(auditLog.event),
-      entity: String(auditLog.entity),
-      entityId:
-        typeof auditLog.entityId === "number" ? auditLog.entityId : null,
-      userId: typeof auditLog.userId === "number" ? auditLog.userId : null,
-      payload: auditLog.payload,
+      event,
+      entity: "vehicle",
+      entityId,
+      userId,
+      payload,
       createdAt:
         auditLog.createdAt instanceof Date
           ? auditLog.createdAt

@@ -45,7 +45,10 @@ describe("AuditService", () => {
   });
 
   it("findAll returns up to 50 logs ordered by createdAt desc", async () => {
-    const logs = [createAuditLog("vehicle.updated"), createAuditLog("vehicle.created")];
+    const logs = [
+      createAuditLog("vehicle.updated"),
+      createAuditLog("vehicle.created"),
+    ];
 
     findCursor.toArray.mockResolvedValue(logs);
 

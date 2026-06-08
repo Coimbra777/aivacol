@@ -1,7 +1,7 @@
 import { NotFoundException } from "@nestjs/common";
 import { Repository } from "typeorm";
+import { AuditPublisherService } from "../audit/audit-publisher.service";
 import { Brand } from "../brands/entities/brand.entity";
-import { RabbitmqService } from "../messaging/rabbitmq.service";
 import { Model } from "../models/entities/model.entity";
 import { VehiclesCacheService } from "./vehicles-cache.service";
 import { Vehicle } from "./entities/vehicle.entity";
@@ -24,7 +24,9 @@ describe("VehiclesService", () => {
       | "invalidateDetail"
     >
   >;
-  let rabbitmqService: jest.Mocked<Pick<RabbitmqService, "publishAuditEvent">>;
+  let auditPublisherService: jest.Mocked<
+    Pick<AuditPublisherService, "publishVehicleEvent">
+  >;
 
   beforeEach(() => {
     vehiclesRepository = {
@@ -48,15 +50,15 @@ describe("VehiclesService", () => {
       invalidateDetail: jest.fn(),
     };
 
-    rabbitmqService = {
-      publishAuditEvent: jest.fn(),
+    auditPublisherService = {
+      publishVehicleEvent: jest.fn(),
     };
 
     vehiclesService = new VehiclesService(
       vehiclesRepository as unknown as Repository<Vehicle>,
       modelsRepository as unknown as Repository<Model>,
       vehiclesCacheService as unknown as VehiclesCacheService,
-      rabbitmqService as unknown as RabbitmqService,
+      auditPublisherService as unknown as AuditPublisherService,
     );
   });
 
@@ -162,6 +164,19 @@ describe("VehiclesService", () => {
     );
 
     expect(vehiclesCacheService.invalidateList).toHaveBeenCalledTimes(1);
+    expect(auditPublisherService.publishVehicleEvent).toHaveBeenCalledWith(
+      "vehicle.created",
+      savedVehicle.id,
+      savedVehicle.createdBy,
+      {
+        licensePlate: savedVehicle.licensePlate,
+        chassis: savedVehicle.chassis,
+        renavam: savedVehicle.renavam,
+        year: savedVehicle.year,
+        modelId: savedVehicle.modelId,
+        createdBy: savedVehicle.createdBy,
+      },
+    );
   });
 
   it("invalidates list and detail cache on update", async () => {
@@ -188,6 +203,19 @@ describe("VehiclesService", () => {
     expect(vehiclesCacheService.invalidateDetail).toHaveBeenCalledWith(
       existingVehicle.id,
     );
+    expect(auditPublisherService.publishVehicleEvent).toHaveBeenCalledWith(
+      "vehicle.updated",
+      updatedVehicle.id,
+      updatedVehicle.createdBy,
+      {
+        licensePlate: updatedVehicle.licensePlate,
+        chassis: updatedVehicle.chassis,
+        renavam: updatedVehicle.renavam,
+        year: updatedVehicle.year,
+        modelId: updatedVehicle.modelId,
+        createdBy: updatedVehicle.createdBy,
+      },
+    );
   });
 
   it("invalidates list and detail cache on remove", async () => {
@@ -202,6 +230,19 @@ describe("VehiclesService", () => {
     expect(vehiclesCacheService.invalidateList).toHaveBeenCalledTimes(1);
     expect(vehiclesCacheService.invalidateDetail).toHaveBeenCalledWith(
       vehicle.id,
+    );
+    expect(auditPublisherService.publishVehicleEvent).toHaveBeenCalledWith(
+      "vehicle.deleted",
+      vehicle.id,
+      vehicle.createdBy,
+      {
+        licensePlate: vehicle.licensePlate,
+        chassis: vehicle.chassis,
+        renavam: vehicle.renavam,
+        year: vehicle.year,
+        modelId: vehicle.modelId,
+        createdBy: vehicle.createdBy,
+      },
     );
   });
 });

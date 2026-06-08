@@ -223,11 +223,12 @@ O cache Redis foi implementado somente para `vehicles`.
 
 Quando um veículo é criado, atualizado ou removido:
 
-1. o `VehiclesService` publica um evento no RabbitMQ
-2. o `AuditConsumer` consome a fila `audit.events`
-3. o `AuditService` salva o log na collection `audit_logs` do MongoDB
+1. o `VehiclesService` chama o `AuditPublisherService`
+2. o `AuditPublisherService` publica um evento no RabbitMQ
+3. o `AuditConsumer` consome a fila `audit.events`
+4. o `AuditService` salva o log na collection `audit_logs` do MongoDB
 
-Eventos atuais:
+Essa auditoria cobre somente os eventos de `vehicles`:
 
 - `vehicle.created`
 - `vehicle.updated`
