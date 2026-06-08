@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { validateEnv } from "./config/validation.config";
+import { AuditModule } from "./modules/audit/audit.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { BrandsModule } from "./modules/brands/brands.module";
 import { ModelsModule } from "./modules/models/models.module";
@@ -38,6 +39,7 @@ import { VehiclesModule } from "./modules/vehicles/vehicles.module";
       }),
     }),
 
+    AuditModule,
     AuthModule,
     BrandsModule,
     ModelsModule,

@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import { RabbitmqService } from "../messaging/rabbitmq.service";
 import { Model } from "../models/entities/model.entity";
 import { CreateVehicleDto } from "./dto/create-vehicle.dto";
 import { UpdateVehicleDto } from "./dto/update-vehicle.dto";
@@ -20,6 +21,7 @@ export class VehiclesService {
     @InjectRepository(Model)
     private readonly modelsRepository: Repository<Model>,
     private readonly vehiclesCacheService: VehiclesCacheService,
+    private readonly rabbitmqService: RabbitmqService,
   ) {}
 
   async create(
@@ -39,6 +41,18 @@ export class VehiclesService {
 
     const savedVehicle = await this.vehiclesRepository.save(vehicle);
     await this.vehiclesCacheService.invalidateList();
+    await this.rabbitmqService.publishAuditEvent({
+      type: "vehicle.created",
+      vehicleId: savedVehicle.id,
+      data: {
+        licensePlate: savedVehicle.licensePlate,
+        chassis: savedVehicle.chassis,
+        renavam: savedVehicle.renavam,
+        year: savedVehicle.year,
+        modelId: savedVehicle.modelId,
+        createdBy: savedVehicle.createdBy,
+      },
+    });
 
     return this.findOne(savedVehicle.id);
   }
@@ -130,6 +144,18 @@ export class VehiclesService {
     const savedVehicle = await this.vehiclesRepository.save(vehicle);
     await this.vehiclesCacheService.invalidateList();
     await this.vehiclesCacheService.invalidateDetail(id);
+    await this.rabbitmqService.publishAuditEvent({
+      type: "vehicle.updated",
+      vehicleId: savedVehicle.id,
+      data: {
+        licensePlate: savedVehicle.licensePlate,
+        chassis: savedVehicle.chassis,
+        renavam: savedVehicle.renavam,
+        year: savedVehicle.year,
+        modelId: savedVehicle.modelId,
+        createdBy: savedVehicle.createdBy,
+      },
+    });
 
     return this.findOne(savedVehicle.id);
   }
@@ -140,6 +166,18 @@ export class VehiclesService {
     await this.vehiclesRepository.remove(vehicle);
     await this.vehiclesCacheService.invalidateList();
     await this.vehiclesCacheService.invalidateDetail(id);
+    await this.rabbitmqService.publishAuditEvent({
+      type: "vehicle.deleted",
+      vehicleId: vehicle.id,
+      data: {
+        licensePlate: vehicle.licensePlate,
+        chassis: vehicle.chassis,
+        renavam: vehicle.renavam,
+        year: vehicle.year,
+        modelId: vehicle.modelId,
+        createdBy: vehicle.createdBy,
+      },
+    });
   }
 
   private async ensureLicensePlateAvailable(

@@ -1,0 +1,129 @@
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { Collection, Document, MongoClient, ObjectId, WithId } from "mongodb";
+
+type AuditLog = {
+  event: string;
+  entity: string;
+  entityId: number | null;
+  userId: number | null;
+  payload: unknown;
+  createdAt: Date;
+};
+
+type AuditLogResponse = AuditLog & {
+  id: string;
+};
+
+@Injectable()
+export class AuditService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(AuditService.name);
+  private client?: MongoClient;
+  private collection?: Collection<Document>;
+
+  constructor(private readonly configService: ConfigService) {}
+
+  async onModuleInit(): Promise<void> {
+    const mongodbUri = this.configService.get<string>("MONGODB_URI");
+
+    if (!mongodbUri) {
+      this.logger.warn("MongoDB is not configured. Audit logs will be skipped.");
+      return;
+    }
+
+    try {
+      this.client = new MongoClient(mongodbUri);
+      await this.client.connect();
+      this.collection = this.client.db().collection("audit_logs");
+    } catch (error) {
+      const message =
+        error instanceof Error ? (error.stack ?? error.message) : String(error);
+      this.logger.error("Failed to connect to MongoDB for audit logs", message);
+    }
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    if (this.client) {
+      await this.client.close().catch(() => undefined);
+    }
+  }
+
+  async saveLog(auditLog: AuditLog): Promise<void> {
+    if (!this.collection) {
+      this.logger.warn("MongoDB collection is not available. Skipping audit log save.");
+      return;
+    }
+
+    try {
+      await this.collection.insertOne(auditLog);
+    } catch (error) {
+      const message =
+        error instanceof Error ? (error.stack ?? error.message) : String(error);
+      this.logger.error("Failed to save audit log in MongoDB", message);
+    }
+  }
+
+  async findAll(): Promise<AuditLogResponse[]> {
+    if (!this.collection) {
+      this.logger.warn(
+        "MongoDB collection is not available. Returning empty audit log list.",
+      );
+      return [];
+    }
+
+    const auditLogs = await this.collection
+      .find({})
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .toArray();
+
+    return auditLogs.map((auditLog) => this.mapAuditLog(auditLog));
+  }
+
+  async findLatest(): Promise<AuditLogResponse[]> {
+    return this.findAll();
+  }
+
+  async findOne(id: string): Promise<AuditLogResponse> {
+    if (!ObjectId.isValid(id)) {
+      throw new BadRequestException("Invalid audit log id");
+    }
+
+    if (!this.collection) {
+      throw new NotFoundException("Audit log not found");
+    }
+
+    const auditLog = await this.collection.findOne({
+      _id: new ObjectId(id),
+    });
+
+    if (!auditLog) {
+      throw new NotFoundException("Audit log not found");
+    }
+
+    return this.mapAuditLog(auditLog);
+  }
+
+  private mapAuditLog(auditLog: WithId<Document>): AuditLogResponse {
+    return {
+      id: auditLog._id.toString(),
+      event: String(auditLog.event),
+      entity: String(auditLog.entity),
+      entityId:
+        typeof auditLog.entityId === "number" ? auditLog.entityId : null,
+      userId: typeof auditLog.userId === "number" ? auditLog.userId : null,
+      payload: auditLog.payload,
+      createdAt:
+        auditLog.createdAt instanceof Date
+          ? auditLog.createdAt
+          : new Date(String(auditLog.createdAt)),
+    };
+  }
+}

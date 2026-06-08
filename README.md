@@ -1,110 +1,150 @@
 # Desafio Info
 
-Backend technical test for the Aivacol Fleet Management Platform.
+API backend do desafio técnico da plataforma de gestão de frotas da Aivacol.
 
-## Requirements
+O objetivo do projeto é entregar uma base simples, fácil de rodar e fácil de explicar, cobrindo autenticação, CRUD principal de frota, cache com Redis, mensageria com RabbitMQ e auditoria persistida em MongoDB.
 
-- Docker
+## Stack utilizada
+
+- Node.js 20
+- NestJS
+- TypeORM
+- SQL Server
+- Redis
+- RabbitMQ
+- MongoDB
 - Docker Compose
-- Make
+- Jest + Supertest
 
-## Environment
+## Funcionalidades implementadas
 
-Copy the example environment file:
+Escopo principal:
+
+- autenticação com JWT usando `email` e `password`
+- CRUD de `users`
+- CRUD de `brands`
+- CRUD de `models`
+- CRUD de `vehicles`
+- relacionamento `Brand -> Model -> Vehicle`
+- preenchimento de `created_by` com o usuário autenticado
+
+Bônus implementados:
+
+- módulo de `users`
+- módulo de `brands`
+- cache Redis em `vehicles`
+- publicação de eventos no RabbitMQ
+- auditoria com consumo no RabbitMQ e persistência no MongoDB
+- ambiente completo com Docker Compose
+
+## Como rodar do zero
+
+1. Copie o arquivo de ambiente:
 
 ```bash
 cp .env.example .env
 ```
 
-Main local addresses:
-
-- API: `http://localhost:3000`
-- SQL Server: `localhost:1433`
-- Redis: `localhost:6379`
-
-## Project Setup
-
-Run the full local setup:
+2. Suba o ambiente completo:
 
 ```bash
 make setup
 ```
 
-This command will:
+Esse comando faz:
 
-1. start the containers
-2. create the `desafio_info` database if needed
-3. run migrations
-4. run the seed
+1. sobe os containers
+2. cria o banco `desafio_info` se necessário
+3. roda as migrations
+4. roda o seed inicial
 
-## Make Commands
+## Endereços locais
+
+- API: `http://localhost:3000`
+- RabbitMQ Management: `http://localhost:15672`
+- SQL Server: `localhost:1433`
+- Redis: `localhost:6379`
+- MongoDB: `localhost:27017`
+
+## Comandos úteis do Makefile
 
 ```bash
 make up
+make down
+make reset
+make logs
+make ps
 make database
 make migrate
 make seed
 make setup
-make logs
-make down
-make reset
-make clean
 make build
-```
-
-What each command does:
-
-- `make up`: starts the containers with Docker Compose
-- `make database`: creates the application database if it does not exist
-- `make migrate`: runs TypeORM migrations
-- `make seed`: runs the initial seed
-- `make setup`: runs the full flow (`up`, `database`, `migrate`, `seed`)
-- `make logs`: shows API logs
-- `make down`: stops the containers
-- `make reset`: stops the containers and removes volumes
-- `make clean`: removes `dist` inside the API container
-- `make build`: runs `make clean` and then `npm run build` inside the API container
-
-## Tests
-
-Run unit tests:
-
-```bash
-npm run test
-```
-
-Run e2e tests:
-
-```bash
-npm run test:e2e
-```
-
-Current automated coverage:
-
-- `AuthService` unit tests
-- `ModelsService` unit tests
-- `VehiclesService` unit tests, including cache behavior
-- login and protected routes in e2e
-- authenticated creation of `models` and `vehicles` in e2e
-
-## Redis Cache
-
-Redis cache is used only in `vehicles`.
-
-- `GET /vehicles` uses the `vehicles:list` key
-- `GET /vehicles/:id` uses the `vehicles:detail:{id}` key
-- cache expiration comes from `VEHICLES_CACHE_TTL`
-
-If you hit the known local permission problem with `dist`, use the container flow:
-
-```bash
+make test
+make test-e2e
+make test-all
 make clean
-make build
 ```
 
-## Login Test
+Resumo dos comandos:
 
-Use the seeded user to test authentication:
+- `make up`: sobe os containers com rebuild
+- `make down`: para os containers
+- `make reset`: para os containers e remove volumes
+- `make logs`: mostra logs do container `api`
+- `make ps`: mostra o status dos serviços
+- `make database`: cria o banco da aplicação
+- `make migrate`: roda as migrations
+- `make seed`: roda o seed inicial
+- `make setup`: executa `up`, `database`, `migrate` e `seed`
+- `make clean`: remove `dist` dentro do container `api`
+- `make build`: executa `clean` e depois `npm run build` dentro do container
+- `make test`: roda testes unitários dentro do container
+- `make test-e2e`: roda testes e2e dentro do container
+- `make test-all`: roda testes unitários e e2e em sequência
+
+## Variáveis principais do .env
+
+Banco SQL Server:
+
+- `DB_HOST`
+- `DB_PORT`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `DB_DATABASE`
+- `DB_ENCRYPT`
+- `DB_TRUST_SERVER_CERTIFICATE`
+
+JWT:
+
+- `JWT_SECRET`
+- `JWT_EXPIRES_IN`
+
+Redis:
+
+- `REDIS_HOST`
+- `REDIS_PORT`
+- `REDIS_DB`
+- `VEHICLES_CACHE_TTL`
+
+RabbitMQ:
+
+- `RABBITMQ_URL`
+- `RABBITMQ_AUDIT_QUEUE`
+
+MongoDB:
+
+- `MONGODB_URI`
+
+Seed:
+
+- `SEED_AIVACOL_EMAIL`
+- `SEED_AIVACOL_PASSWORD`
+
+## Como testar o login
+
+O projeto cria um usuário inicial via seed.
+
+Exemplo:
 
 ```bash
 curl -X POST http://localhost:3000/auth/login \
@@ -112,7 +152,7 @@ curl -X POST http://localhost:3000/auth/login \
   -d '{"email":"aivacol@example.com","password":"ChangeMe123!"}'
 ```
 
-Expected response:
+Resposta esperada:
 
 ```json
 {
@@ -121,28 +161,21 @@ Expected response:
 }
 ```
 
-## CRUD Examples
-
-Use numeric ids in the protected CRUD routes.
-
-Examples:
-
-- `GET /users/1`
-- `GET /models/1`
-- `GET /vehicles/1`
-
-Create a model:
+Use esse token nas rotas protegidas com:
 
 ```bash
-curl -X POST http://localhost:3000/models \
-  -H "Authorization: Bearer TOKEN_JWT" \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"Corolla","brandId":1}'
+-H "Authorization: Bearer TOKEN_JWT"
 ```
 
-`created_by` is filled automatically from the authenticated user.
+## Fluxo Brand -> Model -> Vehicle
 
-Create a brand:
+Fluxo recomendado para testar a regra principal:
+
+1. criar uma `brand`
+2. criar um `model` informando `brandId`
+3. criar um `vehicle` informando `modelId`
+
+Criar brand:
 
 ```bash
 curl -X POST http://localhost:3000/brands \
@@ -151,7 +184,16 @@ curl -X POST http://localhost:3000/brands \
   -d '{"name":"Toyota"}'
 ```
 
-Create a vehicle linked to a model:
+Criar model:
+
+```bash
+curl -X POST http://localhost:3000/models \
+  -H "Authorization: Bearer TOKEN_JWT" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Corolla","brandId":1}'
+```
+
+Criar vehicle:
 
 ```bash
 curl -X POST http://localhost:3000/vehicles \
@@ -166,20 +208,73 @@ curl -X POST http://localhost:3000/vehicles \
   }'
 ```
 
-## DBeaver Validation
+## Cache Redis em vehicles
 
-Use these connection settings:
+O cache Redis foi implementado somente para `vehicles`.
 
-- Host: `localhost`
-- Port: `1433`
-- Database: `desafio_info`
-- User: `sa`
-- Password: `YourStrong!Passw0rd`
+- `GET /vehicles` usa a chave `vehicles:list`
+- `GET /vehicles/:id` usa a chave `vehicles:detail:{id}`
+- o TTL vem de `VEHICLES_CACHE_TTL`
+- `POST /vehicles` invalida cache da listagem
+- `PATCH /vehicles/:id` invalida cache da listagem e do detalhe
+- `DELETE /vehicles/:id` invalida cache da listagem e do detalhe
 
-After connecting, you can validate the seed with:
+## Auditoria com RabbitMQ + MongoDB
 
-```sql
-SELECT * FROM users;
+Quando um veículo é criado, atualizado ou removido:
+
+1. o `VehiclesService` publica um evento no RabbitMQ
+2. o `AuditConsumer` consome a fila `audit.events`
+3. o `AuditService` salva o log na collection `audit_logs` do MongoDB
+
+Eventos atuais:
+
+- `vehicle.created`
+- `vehicle.updated`
+- `vehicle.deleted`
+
+Leitura de auditoria:
+
+- `GET /audit`
+- `GET /audit/:id`
+
+As rotas de auditoria também exigem JWT.
+
+## Testes
+
+Para rodar os testes via Docker Compose:
+
+```bash
+make test
+make test-e2e
+make test-all
 ```
 
-You should see the `aivacol` user.
+Cobertura atual resumida:
+
+- `AuthService`
+- `ModelsService`
+- `BrandsService`
+- `VehiclesService`, incluindo cache
+- `AuditService`
+- `AuditController`
+- login e rotas protegidas em e2e
+- escrita autenticada de `models` e `vehicles`
+- leitura autenticada de `audit`
+
+## Arquivo de exemplo de veículos
+
+O repositório possui um arquivo de exemplo com dados de veículos:
+
+- `seed_vehicles_aivacol.json`
+
+Ele pode ser usado como referência para carga manual ou testes rápidos de dados.
+
+## Observações finais
+
+- a API roda no container `api`
+- o SQL Server roda no container `sqlserver`
+- o Redis roda no container `redis`
+- o RabbitMQ roda no container `rabbitmq`
+- o MongoDB roda no container `mongodb`
+- a comunicação entre os serviços usa os nomes do Docker Compose

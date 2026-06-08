@@ -4,6 +4,8 @@ import { ConfigService } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
 import * as bcrypt from "bcrypt";
 import request from "supertest";
+import { AuditController } from "../src/modules/audit/audit.controller";
+import { AuditService } from "../src/modules/audit/audit.service";
 import { AuthController } from "../src/modules/auth/auth.controller";
 import { AuthService } from "../src/modules/auth/auth.service";
 import { JwtAuthGuard } from "../src/modules/auth/guards/jwt-auth.guard";
@@ -20,6 +22,10 @@ import { VehiclesService } from "../src/modules/vehicles/vehicles.service";
 
 describe("Auth e2e", () => {
   let app: INestApplication;
+  let auditServiceMock: {
+    findAll: jest.Mock;
+    findOne: jest.Mock;
+  };
   let modelsServiceMock: Pick<ModelsService, "findAll" | "create">;
   let vehiclesServiceMock: Pick<VehiclesService, "findAll" | "create">;
 
@@ -47,6 +53,11 @@ describe("Auth e2e", () => {
       ),
     };
 
+    auditServiceMock = {
+      findAll: jest.fn(async () => [createAuditLog()]),
+      findOne: jest.fn(async (id: string) => createAuditLog(id)),
+    };
+
     const moduleRef = await Test.createTestingModule({
       imports: [
         JwtModule.register({
@@ -57,11 +68,20 @@ describe("Auth e2e", () => {
         }),
       ],
 
-      controllers: [AuthController, ModelsController, VehiclesController],
+      controllers: [
+        AuthController,
+        AuditController,
+        ModelsController,
+        VehiclesController,
+      ],
       providers: [
         AuthService,
         JwtAuthGuard,
         JwtStrategy,
+        {
+          provide: AuditService,
+          useValue: auditServiceMock,
+        },
         {
           provide: UsersService,
           useValue: usersServiceMock,
@@ -144,6 +164,33 @@ describe("Auth e2e", () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual([]);
+  });
+
+  it("GET /audit returns 401 without token", async () => {
+    await createRequest(app).get("/audit").expect(401);
+  });
+
+  it("GET /audit returns 200 with valid token", async () => {
+    const accessToken = await loginAndGetToken(app);
+
+    const response = await createRequest(app)
+      .get("/audit")
+      .set("Authorization", `Bearer ${accessToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([createAuditLog()]);
+  });
+
+  it("GET /audit/:id returns 200 with valid token", async () => {
+    const accessToken = await loginAndGetToken(app);
+    const auditLog = createAuditLog();
+
+    const response = await createRequest(app)
+      .get(`/audit/${auditLog.id}`)
+      .set("Authorization", `Bearer ${accessToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(auditLog);
   });
 
   it("POST /models returns success with valid token and uses authenticated user id", async () => {
@@ -272,5 +319,19 @@ function createVehicle(
     creator: undefined as never,
     createdAt: new Date(),
     updatedAt: new Date(),
+  };
+}
+
+function createAuditLog(id = "507f1f77bcf86cd799439011") {
+  return {
+    id,
+    event: "vehicle.created",
+    entity: "vehicle",
+    entityId: 1,
+    userId: 1,
+    payload: {
+      licensePlate: "ABC1234",
+    },
+    createdAt: "2026-06-08T00:30:28.704Z",
   };
 }

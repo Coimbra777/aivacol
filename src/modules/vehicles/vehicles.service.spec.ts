@@ -1,6 +1,7 @@
 import { NotFoundException } from "@nestjs/common";
 import { Repository } from "typeorm";
 import { Brand } from "../brands/entities/brand.entity";
+import { RabbitmqService } from "../messaging/rabbitmq.service";
 import { Model } from "../models/entities/model.entity";
 import { VehiclesCacheService } from "./vehicles-cache.service";
 import { Vehicle } from "./entities/vehicle.entity";
@@ -23,6 +24,7 @@ describe("VehiclesService", () => {
       | "invalidateDetail"
     >
   >;
+  let rabbitmqService: jest.Mocked<Pick<RabbitmqService, "publishAuditEvent">>;
 
   beforeEach(() => {
     vehiclesRepository = {
@@ -46,10 +48,15 @@ describe("VehiclesService", () => {
       invalidateDetail: jest.fn(),
     };
 
+    rabbitmqService = {
+      publishAuditEvent: jest.fn(),
+    };
+
     vehiclesService = new VehiclesService(
       vehiclesRepository as unknown as Repository<Vehicle>,
       modelsRepository as unknown as Repository<Model>,
       vehiclesCacheService as unknown as VehiclesCacheService,
+      rabbitmqService as unknown as RabbitmqService,
     );
   });
 

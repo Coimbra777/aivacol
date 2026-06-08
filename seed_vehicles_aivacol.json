@@ -1,0 +1,42 @@
+[
+  {
+    "brand": "Toyota",
+    "model": "Corolla",
+    "licensePlate": "ABC1234",
+    "chassis": "9BWZZZ377VT004251",
+    "renavam": "12345678901",
+    "year": 2024
+  },
+  {
+    "brand": "Honda",
+    "model": "Civic",
+    "licensePlate": "DEF5678",
+    "chassis": "9BWZZZ377VT004252",
+    "renavam": "12345678902",
+    "year": 2023
+  },
+  {
+    "brand": "Volkswagen",
+    "model": "Gol",
+    "licensePlate": "GHI9012",
+    "chassis": "9BWZZZ377VT004253",
+    "renavam": "12345678903",
+    "year": 2022
+  },
+  {
+    "brand": "Chevrolet",
+    "model": "Onix",
+    "licensePlate": "JKL3456",
+    "chassis": "9BWZZZ377VT004254",
+    "renavam": "12345678904",
+    "year": 2021
+  },
+  {
+    "brand": "Fiat",
+    "model": "Strada",
+    "licensePlate": "MNO7890",
+    "chassis": "9BWZZZ377VT004255",
+    "renavam": "12345678905",
+    "year": 2024
+  }
+]

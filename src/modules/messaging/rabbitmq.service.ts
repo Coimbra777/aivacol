@@ -1,0 +1,48 @@
+import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { Channel, ChannelModel, connect } from "amqplib";
+
+@Injectable()
+export class RabbitmqService {
+  private readonly logger = new Logger(RabbitmqService.name);
+
+  constructor(private readonly configService: ConfigService) {}
+
+  async publishAuditEvent(event: unknown): Promise<void> {
+    const rabbitmqUrl = this.configService.get<string>("RABBITMQ_URL");
+    const queueName = this.configService.get<string>("RABBITMQ_AUDIT_QUEUE");
+
+    if (!rabbitmqUrl || !queueName) {
+      this.logger.warn(
+        "RabbitMQ is not configured. Skipping audit event publish.",
+      );
+      return;
+    }
+
+    let connection: ChannelModel | undefined;
+    let channel: Channel | undefined;
+
+    try {
+      connection = await connect(rabbitmqUrl);
+      channel = await connection.createChannel();
+
+      await channel.assertQueue(queueName, { durable: true });
+      channel.sendToQueue(queueName, Buffer.from(JSON.stringify(event)), {
+        persistent: true,
+        contentType: "application/json",
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? (error.stack ?? error.message) : String(error);
+      this.logger.error("Failed to publish audit event to RabbitMQ", message);
+    } finally {
+      if (channel) {
+        await channel.close().catch(() => undefined);
+      }
+
+      if (connection) {
+        await connection.close().catch(() => undefined);
+      }
+    }
+  }
+}
