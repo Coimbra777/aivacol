@@ -217,6 +217,20 @@ describe("Auth e2e", () => {
     );
   });
 
+  it("POST /models returns clear required message when brandId is missing", async () => {
+    const accessToken = await loginAndGetToken(app);
+
+    const response = await createRequest(app)
+      .post("/models")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({
+        name: "Corolla",
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toContain("brandId is required");
+  });
+
   it("POST /vehicles returns success with valid token and uses authenticated user id", async () => {
     const accessToken = await loginAndGetToken(app);
     const body = {
@@ -243,6 +257,40 @@ describe("Auth e2e", () => {
       createdBy: 1,
     });
     expect(vehiclesServiceMock.create).toHaveBeenCalledWith(body, 1);
+  });
+
+  it("POST /vehicles returns clear required message when year is missing", async () => {
+    const accessToken = await loginAndGetToken(app);
+
+    const response = await createRequest(app)
+      .post("/vehicles")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({
+        licensePlate: "ABC1234",
+        chassis: "9BWZZZ377VT004251",
+        renavam: "12345678901",
+        modelId: 1,
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toContain("year is required");
+  });
+
+  it("POST /vehicles returns clear required message when modelId is missing", async () => {
+    const accessToken = await loginAndGetToken(app);
+
+    const response = await createRequest(app)
+      .post("/vehicles")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({
+        licensePlate: "ABC1234",
+        chassis: "9BWZZZ377VT004251",
+        renavam: "12345678901",
+        year: 2024,
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toContain("modelId is required");
   });
 });
 
