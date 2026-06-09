@@ -298,3 +298,4 @@ Ele pode ser usado como referência para carga manual ou testes rápidos de dado
 - o RabbitMQ roda no container `rabbitmq`
 - o MongoDB roda no container `mongodb`
 - a comunicação entre os serviços usa os nomes do Docker Compose
+- em /docs deixei collections postman e insonminia para teste.
