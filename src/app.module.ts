@@ -34,6 +34,8 @@ import { VehiclesModule } from "./modules/vehicles/vehicles.module";
         autoLoadEntities: true,
         synchronize: false,
         migrationsRun: false,
+        logging: ["query", "error", "warn"],
+        maxQueryExecutionTime: 100,
       }),
     }),
 

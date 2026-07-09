@@ -179,6 +179,33 @@ Use esse token nas rotas protegidas com:
 -H "Authorization: Bearer TOKEN_JWT"
 ```
 
+## Seed de performance
+
+O seed de performance reutiliza o `data-source` atual, usa o usuário `aivacol` como `createdBy`, cria ou reaproveita a brand `Performance Brand`, cria ou reaproveita o model `Performance Model` e insere usuários e veículos em batches.
+
+Rode primeiro o seed inicial para garantir que o usuário `aivacol` exista:
+
+```bash
+make seed
+```
+
+Depois rode o seed de performance informando:
+
+1. quantidade de usuários fake
+2. quantidade de veículos
+
+Exemplo:
+
+```bash
+docker compose exec api npm run seed:performance -- 10000 50000
+```
+
+Os registros usam prefixos fixos para evitar duplicidade simples:
+
+- usuários: `perf-user-`
+- emails: `perf-email-`
+- placas: `PERF-PLATE-`
+
 ## Fluxo Brand -> Model -> Vehicle
 
 Fluxo recomendado para testar a regra principal:
