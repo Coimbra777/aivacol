@@ -15,6 +15,7 @@ import { Model } from "../src/modules/models/entities/model.entity";
 import { ModelsController } from "../src/modules/models/models.controller";
 import { ModelsService } from "../src/modules/models/models.service";
 import { User } from "../src/modules/users/entities/user.entity";
+import { UsersController } from "../src/modules/users/users.controller";
 import { UsersService } from "../src/modules/users/users.service";
 import { VehiclesController } from "../src/modules/vehicles/vehicles.controller";
 import { Vehicle } from "../src/modules/vehicles/entities/vehicle.entity";
@@ -33,10 +34,18 @@ describe("Auth e2e", () => {
     const passwordHash = await bcrypt.hash("ChangeMe123!", 10);
     const user = createUser(passwordHash);
 
-    const usersServiceMock: Pick<UsersService, "findByEmail"> = {
+    const usersServiceMock: Pick<UsersService, "findByEmail" | "create"> = {
       findByEmail: jest.fn(async (email: string) => {
         return email === user.email ? user : null;
       }),
+      create: jest.fn(async () => ({
+        id: 10,
+        nickname: null,
+        name: "Created",
+        email: "created@example.com",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })),
     };
 
     modelsServiceMock = {
@@ -80,6 +89,7 @@ describe("Auth e2e", () => {
         AuditController,
         ModelsController,
         VehiclesController,
+        UsersController,
       ],
       providers: [
         AuthService,
@@ -210,6 +220,59 @@ describe("Auth e2e", () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual(emptyPage(3, 15));
     expect(vehiclesServiceMock.findAll).toHaveBeenCalledWith(3, 15);
+  });
+
+  it("POST /vehicles rejects a year out of range with 400", async () => {
+    const accessToken = await loginAndGetToken(app);
+
+    await createRequest(app)
+      .post("/vehicles")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({
+        licensePlate: "ABC1234",
+        chassis: "9BWZZZ377VT004251",
+        renavam: "12345678901",
+        year: 1800,
+        modelId: 1,
+      })
+      .expect(400);
+  });
+
+  it("POST /vehicles rejects an undeclared field with 400 (whitelist)", async () => {
+    const accessToken = await loginAndGetToken(app);
+
+    await createRequest(app)
+      .post("/vehicles")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({
+        licensePlate: "ABC1234",
+        chassis: "9BWZZZ377VT004251",
+        renavam: "12345678901",
+        year: 2024,
+        modelId: 1,
+        color: "red",
+      })
+      .expect(400);
+  });
+
+  it("POST /users rejects a missing name with 400", async () => {
+    const accessToken = await loginAndGetToken(app);
+
+    await createRequest(app)
+      .post("/users")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ email: "new@example.com", password: "ChangeMe123!" })
+      .expect(400);
+  });
+
+  it("POST /users rejects a short password with 400", async () => {
+    const accessToken = await loginAndGetToken(app);
+
+    await createRequest(app)
+      .post("/users")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ name: "New", email: "new@example.com", password: "short" })
+      .expect(400);
   });
 
   it("GET /audit/:id returns 200 with valid token", async () => {

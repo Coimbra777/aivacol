@@ -9,7 +9,7 @@ describe("ModelsService", () => {
   let modelsService: ModelsService;
   let modelsRepository: jest.Mocked<Pick<
     Repository<Model>,
-    "create" | "findOne" | "save" | "remove"
+    "create" | "findAndCount" | "findOne" | "save" | "remove"
   >>;
   let vehiclesRepository: jest.Mocked<Pick<Repository<Vehicle>, "count">>;
   let brandsRepository: jest.Mocked<Pick<Repository<Brand>, "findOne">>;
@@ -17,6 +17,7 @@ describe("ModelsService", () => {
   beforeEach(() => {
     modelsRepository = {
       create: jest.fn(),
+      findAndCount: jest.fn(),
       findOne: jest.fn(),
       save: jest.fn(),
       remove: jest.fn(),
@@ -83,6 +84,60 @@ describe("ModelsService", () => {
     });
     expect(modelsRepository.save).toHaveBeenCalledWith(createdModel);
     expect(result).toEqual(createdModel);
+  });
+
+  // RF2.1
+  it("throws NotFoundException on create when brandId does not exist", async () => {
+    brandsRepository.findOne.mockResolvedValue(null);
+
+    await expect(
+      modelsService.create({ name: "Corolla", brandId: 999 }, 1),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(modelsRepository.save).not.toHaveBeenCalled();
+  });
+
+  // RF2.2
+  it("changes the brand on update when the new brand exists", async () => {
+    const existingModel = createModel();
+    const newBrand = { ...createBrand(), id: 2, name: "Honda" };
+
+    modelsRepository.findOne.mockResolvedValue(existingModel);
+    brandsRepository.findOne.mockResolvedValue(newBrand);
+    modelsRepository.save.mockImplementation(async (m) => m as Model);
+
+    const result = await modelsService.update(existingModel.id, { brandId: 2 });
+
+    expect(brandsRepository.findOne).toHaveBeenCalledWith({ where: { id: 2 } });
+    expect(result.brandId).toBe(2);
+    expect(result.brand).toEqual(newBrand);
+  });
+
+  // RF2.2
+  it("throws NotFoundException on update when the new brand does not exist", async () => {
+    modelsRepository.findOne.mockResolvedValue(createModel());
+    brandsRepository.findOne.mockResolvedValue(null);
+
+    await expect(
+      modelsService.update(1, { brandId: 999 }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  // RF2.3
+  it("returns a paginated envelope with the brand on findAll", async () => {
+    const models = [createModel()];
+    modelsRepository.findAndCount.mockResolvedValue([models, 1]);
+
+    const result = await modelsService.findAll(2, 10);
+
+    expect(modelsRepository.findAndCount).toHaveBeenCalledWith({
+      relations: { brand: true },
+      order: { createdAt: "ASC", id: "ASC" },
+      skip: 10,
+      take: 10,
+    });
+    expect(result.data).toEqual(models);
+    expect(result.meta).toMatchObject({ page: 2, limit: 10, total: 1 });
   });
 
   it("updates an existing model", async () => {

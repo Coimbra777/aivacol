@@ -7,13 +7,17 @@ import { BrandsService } from "./brands.service";
 describe("BrandsService", () => {
   let brandsService: BrandsService;
   let brandsRepository: jest.Mocked<
-    Pick<Repository<Brand>, "create" | "findOne" | "save" | "remove">
+    Pick<
+      Repository<Brand>,
+      "create" | "findAndCount" | "findOne" | "save" | "remove"
+    >
   >;
   let modelsRepository: jest.Mocked<Pick<Repository<Model>, "count">>;
 
   beforeEach(() => {
     brandsRepository = {
       create: jest.fn(),
+      findAndCount: jest.fn(),
       findOne: jest.fn(),
       save: jest.fn(),
       remove: jest.fn(),
@@ -31,6 +35,22 @@ describe("BrandsService", () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  // RF3.1
+  it("returns a paginated envelope on findAll", async () => {
+    const brands = [createBrand()];
+    brandsRepository.findAndCount.mockResolvedValue([brands, 1]);
+
+    const result = await brandsService.findAll(3, 5);
+
+    expect(brandsRepository.findAndCount).toHaveBeenCalledWith({
+      order: { createdAt: "ASC", id: "ASC" },
+      skip: 10,
+      take: 5,
+    });
+    expect(result.data).toEqual(brands);
+    expect(result.meta).toMatchObject({ page: 3, limit: 5, total: 1 });
   });
 
   it("creates a brand with createdBy", async () => {
