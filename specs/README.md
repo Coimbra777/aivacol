@@ -19,7 +19,7 @@
 | 002 | Paginação & Escala (50k)       | Paginação em todas as listagens, índices, pool, cache list por página.   | ✅ Concluída |
 | 003 | Seeds fake (todos os módulos)  | `@faker-js/faker`: users, brands, models, vehicles determinísticos.      | ✅ Concluída |
 | 004 | Cobertura de testes            | Unit + e2e para todos os módulos, incluindo paginação e seeds.           | ✅ Concluída |
-| 005 | Frontend React + Vite          | Painel: login, CRUD de todos os recursos, listas paginadas, auditoria.   | ⏳ A specar  |
+| 005 | Frontend React + Vite          | Painel: login, CRUD de todos os recursos, listas paginadas, auditoria.   | ✅ Concluída |
 | 006 | Teste de carga (validação 50k) | k6/artillery provando a meta de 50k; relatório de latência/throughput.   | ⏳ A specar  |
 
 Legenda: 📝 spec pronta · ⏳ a specar · 🚧 em implementação · ✅ concluída.

@@ -6,6 +6,13 @@ import { setupSwagger } from "./swagger";
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
 
+  // CORS para o console (frontend React + Vite). Origens configuráveis por env.
+  app.enableCors({
+    origin: process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(",").map((value) => value.trim())
+      : true,
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

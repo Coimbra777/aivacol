@@ -7,6 +7,11 @@ da Aivacol. Complementa o [README.md](../README.md), que foca em como subir e op
 
 ## 1. Visão geral
 
+> **Frontend:** existe um painel administrativo SPA (React 18 + Vite + TypeScript) em
+> [`frontend/`](../frontend/README.md) que consome esta API — login JWT, CRUD paginado dos
+> 4 recursos e auditoria. Requer `CORS_ORIGIN` liberando a origem do console (default
+> `http://localhost:5173`).
+
 A aplicação é uma API REST em **NestJS 10 / Node 20** que gerencia uma frota de veículos com
 autenticação JWT. Além do CRUD principal, integra quatro serviços de infraestrutura:
 
