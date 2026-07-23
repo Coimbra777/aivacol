@@ -1,7 +1,13 @@
-.PHONY: up down reset logs ps database migrate seed seed-demo setup build test test-e2e test-all clean
+.PHONY: up down reset logs ps database migrate seed seed-demo setup build test test-e2e test-all clean front front-install
 
 up:
 	docker compose up -d --build
+
+front:
+	cd frontend && npm run dev
+
+front-install:
+	cd frontend && npm install
 
 down:
 	docker compose down

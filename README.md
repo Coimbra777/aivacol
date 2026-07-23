@@ -73,10 +73,67 @@ Esse comando faz:
 ## Endereços locais
 
 - API: `http://localhost:3000`
+- Frontend (Fleet Console): `http://localhost:5173`
 - RabbitMQ Management: `http://localhost:15672`
 - SQL Server: `localhost:1433`
 - Redis: `localhost:6379`
 - MongoDB: `localhost:27017`
+
+## Frontend (Fleet Console)
+
+O frontend é um painel administrativo SPA em **React 18 + Vite + TypeScript**, localizado
+na pasta `frontend/`. Ele consome a API REST e **não faz parte do Docker Compose** — roda
+separadamente via Vite.
+
+Funcionalidades: login JWT com rotas protegidas, painel com totais por recurso, CRUD
+paginado de usuários, marcas, modelos e veículos, e auditoria read-only.
+
+### Como rodar o front
+
+Pré-requisito: a API no ar (`make up` ou `make setup` na raiz) e o CORS liberando a porta
+`5173` (já configurado via `CORS_ORIGIN` no `.env`).
+
+Na primeira vez, instale as dependências:
+
+```bash
+make front-install
+```
+
+Depois suba o servidor de desenvolvimento:
+
+```bash
+make front
+```
+
+O painel fica disponível em `http://localhost:5173`.
+
+> Alternativa manual (sem o Makefile):
+>
+> ```bash
+> cd frontend
+> cp .env.example .env   # ajuste VITE_API_BASE_URL se necessário
+> npm install
+> npm run dev
+> ```
+
+### Login e senha (frontend)
+
+As credenciais iniciais são criadas pelo seed do backend (`make seed`). Use no formulário
+de login do painel:
+
+- **Email:** `aivacol@example.com`
+- **Senha:** `ChangeMe123!`
+
+Esses valores vêm das variáveis `SEED_AIVACOL_EMAIL` e `SEED_AIVACOL_PASSWORD` do `.env`.
+Se você alterar essas variáveis e rodar o seed novamente, use as novas credenciais.
+
+### Variável de ambiente do front
+
+O frontend usa seu próprio arquivo `frontend/.env`:
+
+| Variável            | Função                                            |
+| ------------------- | ------------------------------------------------- |
+| `VITE_API_BASE_URL` | URL base da API (default `http://localhost:3000`) |
 
 ## Comandos úteis do Makefile
 
@@ -95,6 +152,8 @@ make test
 make test-e2e
 make test-all
 make clean
+make front
+make front-install
 ```
 
 Resumo dos comandos:
@@ -113,6 +172,8 @@ Resumo dos comandos:
 - `make test`: roda testes unitários dentro do container
 - `make test-e2e`: roda testes e2e dentro do container
 - `make test-all`: roda testes unitários e e2e em sequência
+- `make front`: sobe o frontend em modo desenvolvimento (Vite) em `http://localhost:5173`
+- `make front-install`: instala as dependências do frontend
 
 ## Variáveis principais do .env
 
